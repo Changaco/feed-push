@@ -6,20 +6,15 @@
 daemon_bin="/usr/bin/feed-push"
 daemon_name=$(basename $daemon_bin)
 pid_file="/var/run/$daemon_name.pid"
+PID=$(cat $pid_file)
 
 data_dir=/var/lib/$daemon_name
 conf_dir=/etc/$daemon_name
-
-get_pid() {
-    pgrep -f $daemon_name | grep -v $$
-}
-PID=$(get_pid)
 
 case "$1" in
     start)
         stat_busy "Starting $daemon_name daemon"
         if [ -z "$PID" ]; then
-            [ -f $pid_file ] && rm -f $pid_file
             $daemon_bin "$conf_dir" "$data_dir/state" --fork $pid_file --syslog
             if [ $? -gt 0 ]; then
                 stat_fail
