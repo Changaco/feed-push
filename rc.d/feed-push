@@ -3,17 +3,17 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-get_pid() {
-    pgrep -f $daemon_name | grep -v $$
-}
-PID=$(get_pid)
-
 daemon_bin="/usr/bin/feed-push"
 daemon_name=$(basename $daemon_bin)
 pid_file="/var/run/$daemon_name.pid"
 
 data_dir=/var/lib/$daemon_name
 conf_dir=/etc/$daemon_name
+
+get_pid() {
+    pgrep -f $daemon_name | grep -v $$
+}
+PID=$(get_pid)
 
 case "$1" in
     start)
