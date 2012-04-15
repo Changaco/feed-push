@@ -20,7 +20,7 @@ from   functools  import partial, reduce
 from   glob       import glob
 import json
 import os
-from   os.path    import abspath
+from   os.path    import abspath, dirname, isdir
 import shlex
 from   subprocess import Popen, PIPE, STDOUT
 import sys
@@ -218,8 +218,8 @@ class Apply(argparse.Action):
 
 def MakeDirs(next_type=None):
     def f(s):
-        d = os.dirname(s)
-        if not os.isdir(d):
+        d = dirname(s)
+        if not isdir(d):
             try:
                 os.makedirs(d)
             except OSError as e:
