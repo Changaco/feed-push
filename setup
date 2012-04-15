@@ -1,0 +1,38 @@
+#!/bin/sh
+
+usage () {
+	echo "usage: [DESTDIR=/] [PREFIX=/usr] $(basename "$0") install|uninstall" && exit 1
+}
+
+remove () {
+	[ -e "$1" ] && rm -vrf --preserve-root "$1"
+}
+
+install_dir () {
+	mkdir -p "$2"
+	cp -rv "$1" "$2"
+}
+
+[ $# -eq 1 ] && action=$1 || usage
+
+[ -z "$DESTDIR" ] && DESTDIR=/
+[ -z "$PREFIX" ] && PREFIX=/usr
+_PREFIX=${DESTDIR%%/}/${PREFIX##/}
+
+[ ! -w "$DESTDIR" ] && echo "You don't have write access on $DESTDIR" && exit 1
+
+progname=feed-push
+
+if [ "$action" == install ]; then
+	install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
+	install_dir examples "$_PREFIX/share/$progname"
+	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc"
+elif [ "$action" == uninstall ]; then
+	remove "$PREFIX/bin/$progname"
+	remove "$PREFIX/share/$progname/examples"
+	remove "/etc/rc.d/$progname"
+else
+	usage
+fi
+
+exit 0
