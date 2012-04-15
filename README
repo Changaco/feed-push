@@ -8,7 +8,6 @@ Dependencies:
 
 Compatibility: gamin only works on Linux and FreeBSD as of April 2012
 
-Installation: ./setup install
-Removal: ./setup uninstall
+Installation/Removal/Update: ./setup install|uninstall|update
 
 Configuration: see examples/
