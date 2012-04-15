@@ -27,12 +27,12 @@ confdir="${DESTDIR}etc/$progname"
 if [ "$action" == install ]; then
 	install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
 	install_dir examples "$_PREFIX/share/$progname"
-	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc" && mkdir -v "$confdir"
+	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc" && install -vd "$confdir"
 elif [ "$action" == uninstall ]; then
 	remove "$_PREFIX/bin/$progname"
 	remove "$_PREFIX/share/$progname/examples"
 	remove "${DESTDIR}etc/rc.d/$progname"
-	if [ $(ls -a "$confdir") -eq 2 ]; then rmdir "$confdir"
+	if [ $(ls -a "$confdir" | wc -l) -eq 2 ]; then rmdir "$confdir"
 	else echo "not removing config dir $confdir (not empty)"
 	fi
 elif [ "$action" == update ]; then
