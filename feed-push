@@ -75,21 +75,21 @@ def ignore_event(path, event):
 
 def parse_config_file(config_fd):
     feeds_paths = config_to_feed_paths_to_commands[config_fd.name] = {}
-    cmd = None
-    next_cmd = []
+    cmd = []
     config_fd.seek(0)
     for i, line in enumerate(config_fd):
         line = line.strip()
         if len(line) == 0 or line[0] == '#':
             continue
         if line[0] == '%':
-            next_cmd.append(line[1:].rstrip(';'))
-        elif not next_cmd:
+            if isinstance(cmd, str):
+                cmd = []
+            cmd.append(line[1:].rstrip(';'))
+        elif not cmd:
             log(LOG_ERR, 'missing command in file '+config_fd.name+' before line '+str(i))
             return
         else:
-            cmd = '; '.join(next_cmd)
-            next_cmd = []
+            cmd = '; '.join(cmd)
             for feed_path in glob(line):
                 feed_path = abspath(feed_path)
                 dict_append(feeds_paths, feed_path, cmd)
