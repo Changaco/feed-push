@@ -216,6 +216,20 @@ class Apply(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, self.f(values[0]))
 
+def MakeDirs(next_type=None):
+    def f(s):
+        d = os.dirname(s)
+        if not os.isdir(d):
+            try:
+                os.makedirs(d)
+            except OSError as e:
+                raise argparse.ArgumentTypeError(str(e))
+        if next_type is not None:
+            return next_type(s)
+        else:
+            return s
+    return f
+
 def Directory(s):
     try:
         os.listdir(s)
@@ -253,7 +267,7 @@ if __name__ == '__main__':
 
     p = argparse.ArgumentParser()
     p.add_argument('config', type=FirstOf(AbsPath(argparse.FileType('r')), AbsPath(Directory), error='"{}" is neither a file nor a directory'), help='either a file or a directory')
-    p.add_argument('state_file', type=argparse.FileType('a+'), help='e.g. /var/lib/feed-push/state')
+    p.add_argument('state_file', type=MakeDirs(argparse.FileType('a+')), help='e.g. /var/lib/feed-push/state')
     p.add_argument('--flood', default=False, action='store_true', help='push all articles on startup instead of ignoring the ones older than 24h (useful for debugging)')
     p.add_argument('--fork', metavar='pid-file', nargs=1, type=File(os.O_WRONLY|os.O_CREAT|os.O_EXCL), action=First, help='useful in init scripts')
     p.add_argument('--log-level', nargs=1, default=1, choices=log_levels, action=partial(Apply, log_levels.index), help='default is INFO')
