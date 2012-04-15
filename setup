@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage () {
-	echo "usage: [DESTDIR=/] [PREFIX=/usr] $(basename "$0") install|uninstall" && exit 1
+	echo "usage: [DESTDIR=/] [PREFIX=/usr] $(basename "$0") install|uninstall|update" && exit 1
 }
 
 remove () {
@@ -22,15 +22,22 @@ _PREFIX=${DESTDIR%%/}/${PREFIX##/}
 [ ! -w "$DESTDIR" ] && echo "You don't have write access on $DESTDIR" && exit 1
 
 progname=feed-push
+confdir="${DESTDIR}etc/$progname"
 
 if [ "$action" == install ]; then
 	install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
 	install_dir examples "$_PREFIX/share/$progname"
-	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc"
+	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc" && mkdir -v "$confdir"
 elif [ "$action" == uninstall ]; then
-	remove "$PREFIX/bin/$progname"
-	remove "$PREFIX/share/$progname/examples"
-	remove "/etc/rc.d/$progname"
+	remove "$_PREFIX/bin/$progname"
+	remove "$_PREFIX/share/$progname/examples"
+	remove "${DESTDIR}etc/rc.d/$progname"
+	if [ $(ls -a "$confdir") -eq 2 ]; then rmdir "$confdir"
+	else echo "not removing config dir $confdir (not empty)"
+	fi
+elif [ "$action" == update ]; then
+	$0 uninstall &>/dev/null
+	$0 install
 else
 	usage
 fi
