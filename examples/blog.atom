@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>Changaco&#x27;s blog</title>
+<link href="http://changaco.net/blog/"/>
+<link href="http://changaco.net/blog/feed.atom" rel="self" type="application/atom+xml"/>
+<author>
+<name>Changaco</name>
+
+</author>
+
+
+
+<id>http://changaco.net/blog/</id>
+
+<subtitle type="html">Changaco</subtitle>
+<generator uri="http://ikiwiki.info/" version="3.20111107">ikiwiki</generator>
+<updated>2011-12-10T13:52:20Z</updated>
+<entry>
+	<title>DNS problems and alternatives</title>
+
+	<id>http://changaco.net/blog/DNS_problems_and_alternatives/</id>
+
+	<link href="http://changaco.net/blog/DNS_problems_and_alternatives/"/>
+
+
+
+
+
+	<updated>2011-12-10T13:34:21Z</updated>
+	<published>2011-12-10T13:34:21Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;Replacing the &lt;abbr title=&quot;Domain Name System&quot;&gt;DNS&lt;/abbr&gt; is a recurrent topic. In this post I try to explain the problems and give a list of existing or proposed alternatives.&lt;/p&gt;
+
+&lt;h2 id=&quot;problemsofthedns&quot;&gt;Problems of the DNS&lt;/h2&gt;
+
+&lt;p&gt;A little terminology first : the DNS has two functions, registering and resolving names. Critics of the registration mechanisms are mostly political, resolution problems are mostly technical.&lt;/p&gt;
+
+&lt;h3 id=&quot;censorship&quot;&gt;Censorship&lt;/h3&gt;
+
+&lt;p&gt;The US government has &lt;a href=&quot;http://torrentfreak.com/feds-seize-130-domain-names-in-mass-crackdown-111125/&quot;&gt;seized many domain names in November 2011&lt;/a&gt;, as it had done the year before. Contrary to what some people said, &lt;a href=&quot;http://domainincite.com/icann-had-no-role-in-seizing-torrent-domains/&quot;&gt;the ICANN was not involved in those operations&lt;/a&gt;. It was &lt;a href=&quot;http://en.wikipedia.org/wiki/Verisign&quot;&gt;Verisign&lt;/a&gt;, the operator of the .com, .net, and .name generic top-level domains, that was ordered to seize the domains. As a result, some sites have fled generic TLDs controlled by US companies.&lt;/p&gt;
+
+&lt;h3 id=&quot;economicvampirismanddomainparking&quot;&gt;Economic vampirism and domain parking&lt;/h3&gt;
+
+&lt;p&gt;The DNS is a big profitable business.&lt;/p&gt;
+
+&lt;p&gt;The name renting (you can&#39;t buy a domain name) business works like this : client → registrar (domain manager) → registry (&lt;abbr title=&quot;Top-Level Domain&quot;&gt;TLD&lt;/abbr&gt; manager) → ICANN (root manager). Some of these organizations are nonprofit (e.g. ICANN), but that doesn&#39;t mean people working for them don&#39;t profit (there are high salaries, expensive dinners, trips, etc). Others are corporations that make very good profits&lt;a href=&quot;http://changaco.net/blog/#fn:1&quot; id=&quot;fnref:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;X.509 certificates are another business. They are delivered by Certificate Authorities and used in TLS. This security model has been widely criticized&lt;a href=&quot;http://changaco.net/blog/#fn:2&quot; id=&quot;fnref:2&quot; class=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fn:3&quot; id=&quot;fnref:3&quot; class=&quot;footnote&quot;&gt;3&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fn:4&quot; id=&quot;fnref:4&quot; class=&quot;footnote&quot;&gt;4&lt;/a&gt; and there are plans to put certificates directly in DNS records&lt;a href=&quot;http://changaco.net/blog/#fn:5&quot; id=&quot;fnref:5&quot; class=&quot;footnote&quot;&gt;5&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fn:6&quot; id=&quot;fnref:6&quot; class=&quot;footnote&quot;&gt;6&lt;/a&gt;, and others to replace X.509 by OpenPGP&lt;a href=&quot;http://changaco.net/blog/#fn:7&quot; id=&quot;fnref:7&quot; class=&quot;footnote&quot;&gt;7&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Finally, there is the very annoying &lt;a href=&quot;http://en.wikipedia.org/wiki/domain%20parking&quot;&gt;domain parking&lt;/a&gt; business.&lt;/p&gt;
+
+&lt;h3 id=&quot;technicalproblems&quot;&gt;Technical problems&lt;/h3&gt;
+
+&lt;p&gt;Being very old, the DNS also has technical weaknesses.&lt;/p&gt;
+
+&lt;p&gt;The first is slow propagation of records because the DNS uses time-based caches.&lt;/p&gt;
+
+&lt;p&gt;The second is that records are not stored in a P2P network, but by authoritative servers, which can be taken down by &lt;abbr title=&quot;Denial of Service&quot;&gt;DoS&lt;/abbr&gt; attacks if they aren&#39;t sufficiently protected. This is rarely a problem in practice though.&lt;/p&gt;
+
+&lt;h2 id=&quot;whyhaventtheproblemsbeensolvedyet&quot;&gt;Why haven&#39;t the problems been solved yet ?&lt;/h2&gt;
+
+&lt;p&gt;Well, because different people want things that are contradictory. The problem is often known as &lt;a href=&quot;http://en.wikipedia.org/wiki/Zooko%27s%20triangle&quot;&gt;Zooko&#39;s triangle&lt;/a&gt;, but there are in fact more than three desirable properties for identifiers :&lt;a href=&quot;http://changaco.net/blog/#fn:8&quot; id=&quot;fnref:8&quot; class=&quot;footnote&quot;&gt;8&lt;/a&gt;&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;We want to &lt;strong&gt;choose&lt;/strong&gt; a &lt;strong&gt;unique&lt;/strong&gt; and &lt;strong&gt;memorable&lt;/strong&gt; name so we can communicate it to somebody else even if we don&#39;t have our computer with us at the moment. Some people who always have their smartphone with them may argue that this property is not important anymore, but not everybody has a smartphone.&lt;/li&gt;
+&lt;li&gt;We want a &lt;strong&gt;censorship-free&lt;/strong&gt; system.&lt;/li&gt;
+&lt;li&gt;We want our &lt;strong&gt;trademarks&lt;/strong&gt; to be registered only by us.&lt;/li&gt;
+&lt;li&gt;We want links between documents that are &lt;strong&gt;stable in time&lt;/strong&gt;, the Web doesn&#39;t like broken URLs.&lt;/li&gt;
+&lt;li&gt;We want the registration process to be &lt;strong&gt;easy, fast and free of charge&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;We want a name to be &lt;strong&gt;resolvable&lt;/strong&gt; to an address, otherwise it&#39;s of no use to us.&lt;/li&gt;
+&lt;li&gt;We want names that are &lt;strong&gt;recoverable&lt;/strong&gt; in case of hijacking or loss of credentials.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;existingorproposedalternatives&quot;&gt;Existing or proposed alternatives&lt;/h2&gt;
+
+&lt;p&gt;I can&#39;t help but start by my own DNS replacement proposal. &lt;img src=&quot;http://changaco.net/blog/../smileys/smile.png&quot; alt=&quot;:)&quot; /&gt; The &lt;a href=&quot;http://changaco.net/ins/&quot;&gt;Internet Naming System&lt;/a&gt; acknowledges that there is no perfect solution and chooses to keep a central authority for name allocation. It makes censorship automatically detectable but not impossible.&lt;/p&gt;
+
+&lt;p&gt;Projects for P2P registration of names :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://dot-bit.org/&quot;&gt;Dot-BIT&lt;/a&gt; (&lt;a href=&quot;irc://irc.freenode.net/namecoin&quot;&gt;#namecoin on freenode&lt;/a&gt;) uses Bitcoin-like proof-of-work (which assumes that honest nodes have the majority of computing power)&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.p2pns.org/&quot;&gt;P2PNS&lt;/a&gt; assumes that a vast majority of peers is honest&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://lauren.vortex.com/archive/000787.html&quot;&gt;IDONS: Internet Distributed Open Name System&lt;/a&gt; (&lt;a href=&quot;http://forums.gctip.org/forum-34.html&quot;&gt;forum&lt;/a&gt;) seems dead&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;irc://irc.efnet.org/dns-p2p&quot;&gt;#dns-p2p&lt;/a&gt;, which used to have a wiki on dot-p2p.org, never gave anything and is dead&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Technical solutions for improving resolution :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://beehive.systems.cs.cornell.edu/codons.php&quot;&gt;CoDoNS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://huitema.wordpress.com/2011/01/03/a-simple-p2p-dns-proposal/&quot;&gt;A simple P2P DNS proposal&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Other projects :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://opennicproject.org/&quot;&gt;OpenNIC&lt;/a&gt; (&lt;a href=&quot;irc://irc.freenode.net/opennic&quot;&gt;#opennic on freenode&lt;/a&gt;, &lt;a href=&quot;http://lists.darkdna.net/mailman/listinfo&quot;&gt;OpenNIC lists&lt;/a&gt;) is an alternative root&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://dns.telecomix.org/&quot;&gt;Telecomix Censorship-proof DNS&lt;/a&gt; (&lt;a href=&quot;irc://irc.telecomix.org/dns&quot;&gt;#dns on telecomix IRC&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Other proposals :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;on the &lt;a href=&quot;http://lists.zooko.com/mailman/listinfo/p2p-hackers&quot;&gt;p2p-hackers list&lt;/a&gt; :
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://lists.zooko.com/pipermail/p2p-hackers/2010-December/002598.html&quot;&gt;Secure, decentralized DNS (a.k.a. solving Zooko&#39;s triangle)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://lists.zooko.com/pipermail/p2p-hackers/2010-December/002587.html&quot;&gt;.p2p domain&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://roland.entierement.nu/blog/2010/10/02/for-a-truly-acentric-internet.html&quot;&gt;For a truly acentric Internet&lt;/a&gt;, proposes to abandon meaningful identifiers (an old proposition that comes back regularly)&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.templetons.com/brad/dns/&quot;&gt;Problems, Goals and a Fix for Domain Names&lt;/a&gt;, proposed to only allow trademarks as TLDs&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;referencesandcredits&quot;&gt;References and credits&lt;/h2&gt;
+
+&lt;p&gt;Thanks to Stéphane Bortzmeyer for helping with this post.&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot;&gt;
+&lt;hr /&gt;
+&lt;ol&gt;
+
+&lt;li id=&quot;fn:1&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://www.chemla.org/textes/voleur.html&quot;&gt;Confessions d&#39;un voleur&lt;/a&gt; [fr]&lt;a href=&quot;http://changaco.net/blog/#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:2&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://www.eff.org/deeplinks/2010/03/researchers-reveal-likelihood-governments-fake-ssl&quot;&gt;New Research Suggests That Governments May Fake SSL Certificates&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:2&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:3&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://docs.google.com/present/view?id=df9sn445_206ff3kn9gs&quot;&gt;It&#39;s Time to Fix HTTPS&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:3&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:4&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://lair.fifthhorseman.net/~dkg/tls-centralization/&quot;&gt;Technical Architecture shapes Social Structure: an example from the real world&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:4&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:5&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://tools.ietf.org/wg/dane/&quot;&gt;DNS-based Authentication of Named Entities - IETF Working Group&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:5&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:6&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://www.bortzmeyer.org/jres-dane-2011.html&quot;&gt;Exposé sur les clés dans le DNS à JRES&lt;/a&gt; [fr]&lt;a href=&quot;http://changaco.net/blog/#fnref:6&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:7&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://web.monkeysphere.info/&quot;&gt;The Monkeysphere Project&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:7&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li id=&quot;fn:8&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://www.bortzmeyer.org/no-free-lunch.html&quot;&gt;Inventer un meilleur système de nommage: pas si facile&lt;/a&gt; [fr]&lt;a href=&quot;http://changaco.net/blog/#fnref:8&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;/ol&gt;
+&lt;/div&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/DNS_problems_and_alternatives/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/DNS_problems_and_alternatives/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>Privacy and distant storage</title>
+
+	<id>http://changaco.net/blog/Privacy_and_distant_storage/</id>
+
+	<link href="http://changaco.net/blog/Privacy_and_distant_storage/"/>
+
+
+
+
+
+
+	<category term="tags/idea" />
+
+	<category term="tags/internet" />
+
+
+	<updated>2010-09-02T11:12:33Z</updated>
+	<published>2010-08-30T22:45:55Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;Some people seem to think that their data is only safe in their own homes. I agree that not keeping a local copy or storing unprotected personal documents on a machine you don&#39;t control are bad things. But I was reminded today (while trolling on &lt;a href=&quot;http://www.numerama.com/&quot;&gt;Numerama&lt;/a&gt;, a French tech-related news site) that having them home doesn&#39;t make them safe from:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;hardware failures such as hard drive breakdowns (although &lt;a href=&quot;http://smartmontools.sourceforge.net/&quot;&gt;smartmontools&lt;/a&gt; may be able to alert you before it is too late)&lt;/li&gt;
+&lt;li&gt;disasters such as fire&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Of course, if your home burns, loosing your files will be the least of your concerns, but if you know they are safe it is one less thing to worry about.&lt;/p&gt;
+
+&lt;p&gt;Then I realized that having backups in different geographic places does not necessarily endanger your privacy, it just depends on how you do it. What you need is to encrypt and/or cut the data so that the people who will store it for you will not be able to read or exploit it (just like &lt;a href=&quot;http://en.wikipedia.org/wiki/Freenet&quot;&gt;Freenet&lt;/a&gt; does for different reasons).&lt;/p&gt;
+
+&lt;p&gt;So the next question is where to store it ? I came to see three possibilities:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;pay for some storage service, might be necessary if you have a lot of data&lt;/li&gt;
+&lt;li&gt;share storage space with peers, this was my original thought&lt;/li&gt;
+&lt;li&gt;share storage space with family and/or friends, this the safest of the three and credit goes to Kaliko for suggesting it on the &lt;a href=&quot;xmpp:utopians@muc.changaco.net?join&quot;&gt;utopians chat room&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I believe, like many others, that a good place for such sharing software is in &lt;a href=&quot;http://en.wikipedia.org/wiki/residential%20gateway&quot;&gt;residential gateway&lt;/a&gt;s, maybe we&#39;ll see it implemented someday in the &lt;a href=&quot;http://wiki.debian.org/FreedomBox&quot;&gt;Freedom Box&lt;/a&gt; ?&lt;/p&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/Privacy_and_distant_storage/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/Privacy_and_distant_storage/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>tabs vs spaces</title>
+
+	<id>http://changaco.net/blog/tabs_vs_spaces/</id>
+
+	<link href="http://changaco.net/blog/tabs_vs_spaces/"/>
+
+
+
+
+
+	<updated>2011-04-12T09:23:05Z</updated>
+	<published>2010-06-01T15:09:22Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;In this post I try to summarize the different points of view on the tabs versus spaces war.&lt;/p&gt;
+
+&lt;h2 id=&quot;decompositionoftheproblem&quot;&gt;Decomposition of the problem&lt;/h2&gt;
+
+&lt;p&gt;Firstly, you need to understand the difference between the &lt;strong&gt;tab key&lt;/strong&gt; and the &lt;strong&gt;tab character&lt;/strong&gt;. What you text editor does when you press the tab key is a matter of configuration and has nothing to do with the problem discussed here.&lt;/p&gt;
+
+&lt;p&gt;Secondly, we need to distinguish &lt;strong&gt;indentation&lt;/strong&gt; and &lt;strong&gt;alignment&lt;/strong&gt;, this is explained in &lt;a href=&quot;http://www.iovene.com/61&quot;&gt;TABs vs Spaces. The end of the debate.&lt;/a&gt; and shows why the historical rendering of tabs is not fit for alignment.&lt;/p&gt;
+
+&lt;h2 id=&quot;thesolutions&quot;&gt;The solutions&lt;/h2&gt;
+
+&lt;h3 id=&quot;useonlyspaces&quot;&gt;Use only spaces&lt;/h3&gt;
+
+&lt;p&gt;This is the solution proposed by many and is notably exposed in &lt;a href=&quot;http://www.jwz.org/doc/tabs-vs-spaces.html&quot;&gt;Tabs versus Spaces: An Eternal Holy War.&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;The obvious solution when dynamic doesn&#39;t work is to fall back to static. Using only spaces does indeed work for both indentation and aligning and you can configure most text editors to make it as easy as using tabs. So, what&#39;s wrong with it ? Here&#39;s a list :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;you can&#39;t use proportional fonts&lt;/li&gt;
+&lt;li&gt;you can&#39;t easily change the indentation width&lt;/li&gt;
+&lt;li&gt;your files are larger&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The two first points are all about freedom, maybe you don&#39;t like proportional fonts to code, but some people do.&lt;/p&gt;
+
+&lt;p&gt;As to the third point, people usually reject it by saying that it doesn&#39;t matter nowadays because of disks capacity, network speed and compression. Still, I wanted to make a &lt;em&gt;quick and dirty&lt;/em&gt; measure of the impact of the 4 spaces policy on python 2.6 on my system as of June 2010 ( done in zsh ) :&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;# cd /usr/lib/python2.6
+# for f in **/*(/); do mkdir -p &quot;../python2.6.spaces/&amp;#036;f&quot; &quot;../python2.6.tabs/&amp;#036;f&quot;; done;
+# for f in **/*.py; do cp &quot;&amp;#036;f&quot; &quot;../python2.6.spaces/&amp;#036;f&quot;; cp &quot;&amp;#036;f&quot; &quot;../python2.6.tabs/&amp;#036;f&quot;; done;
+# du -h --max-depth=0 python2.6.*
+43M     python2.6.spaces
+43M     python2.6.tabs
+
+# cd ../python2.6.tabs
+# sed &#39;s/^\(\t*\)    /\1\t/&#39; -i **/*.py
+# du -h --max-depth=0 ../python2.6.tabs
+41M     ../python2.6.tabs
+# sed &#39;s/^\(\t*\)    /\1\t/&#39; -i **/*.py
+# du -h --max-depth=0 ../python2.6.tabs
+39M     ../python2.6.tabs
+
+... I did it two more times but the rounded number stayed 39M
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The result is that using 4 spaces instead of tabs makes files about 10% bigger. If you get a different result or tested something else than python 2.6 I invite you to post a comment.&lt;/p&gt;
+
+&lt;h3 id=&quot;usespacesforalignment&quot;&gt;Use spaces for alignment&lt;/h3&gt;
+
+&lt;p&gt;Since the problem with tabs is alignment, some people argue that you can use whatever you want for indentation as long as you use spaces for alignment. If you choose to use tabs, the indentation width is no longer an issue and most of the space waste goes away, but you still can&#39;t use proportional fonts.&lt;/p&gt;
+
+&lt;h3 id=&quot;elastictabstops&quot;&gt;Elastic tabstops&lt;/h3&gt;
+
+&lt;p&gt;This solution solves all the issues listed here and makes alignment easier. How ? By redefining the way the tab character is displayed. It&#39;s all explained in &lt;a href=&quot;http://nickgravgaard.com/elastictabstops/&quot;&gt;Elastic tabstops - a better way to indent and align code&lt;/a&gt;. The downside is that text editors&#39; code has to be modified.&lt;/p&gt;
+
+&lt;h2 id=&quot;myopinion&quot;&gt;My opinion&lt;/h2&gt;
+
+&lt;p&gt;I use tabs for indentation, spaces for alignment and I wish elastic tabstops were more widely known, implemented and used.&lt;/p&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/tabs_vs_spaces/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/tabs_vs_spaces/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>Réponse à Daniel Glazman</title>
+
+	<id>http://changaco.net/blog/R%C3%A9ponse_%C3%A0_Daniel_Glazman/</id>
+
+	<link href="http://changaco.net/blog/R%C3%A9ponse_%C3%A0_Daniel_Glazman/"/>
+
+
+
+
+
+	<updated>2011-12-10T13:50:13Z</updated>
+	<published>2010-05-16T20:49:20Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;Comme le dit le dicton populaire : « mieux vaut tard que jamais ». Je vais donc profiter de l&#39;ouverture de mon blog pour répondre à un message de Daniel Glazman, mais ce billet concerne aussi Tristan Nitot.&lt;/p&gt;
+
+&lt;p&gt;Commençons par poser le décor, l&#39;histoire commence avec une &lt;a href=&quot;http://standblog.org/blog/post/2010/04/02/Interview-Glazman-BlueGriffon&quot;&gt;interview de Daniel Glazman par Tristan Nitot&lt;/a&gt;. Ayant le Standblog dans mon lecteur de flux je lis l&#39;article et trouvant étrange le modèle économique choisi par M. Glazman je décide de laisser un commentaire :&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Encore et toujours en train d&#39;essayer de vendre des copies, quand allez-vous comprendre que ce n&#39;est pas un modèle viable ?&lt;br /&gt;
+  Voir entre autres : &lt;a href=&quot;http://hcsoftware.sourceforge.net/jason-rohrer/freeDistribution.html&quot;&gt;Free Distribution&lt;/a&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;J&#39;avoue que c&#39;était plutôt &lt;em&gt;trollesque&lt;/em&gt;, j&#39;aurais pu commencer par une question plus neutre sur le pourquoi du modèle économique choisi.&lt;/p&gt;
+
+&lt;p&gt;C&#39;est là que commencent les choses intéressantes. Tout d&#39;abord, les commentaires étaient modérés à priori ce qui compliquait le débat en introduisant de longs délais, on a continué malgré tout, jusqu&#39;à ce que M. Nitot ferme les commentaires, sans donner d&#39;explication. &lt;a href=&quot;http://changaco.net/blog/#note1&quot; id=&quot;note1_c1&quot; title=&quot;Aller &amp;agrave; la note 1&quot;&gt;1&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Puis quelqu&#39;un qui est abonné au blog de M. Glazman m&#39;envoie un message sur Jabber pour me signaler que celui-ci a publié un billet pour continuer le débat : &lt;a href=&quot;http://www.glazman.org/weblog/dotclear/index.php?post/2010/04/07/Usual-suspects&quot;&gt;Usual suspects - &amp;lt;Glazblog/&amp;gt;&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Je réponds donc là-bas, mais M. Glazman en a vite marre et ferme les commentaires à son tour, en laissant ce message :&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;A ce point, crevé par le jetlag, une crève monumentale et mon retour tardif de Paris hier soir, ce commentateur me les broute menu-menu. Ses arguments sont tellement nuls (&quot;&lt;cite&gt;Si BlueGriffon était financé par Mozilla on ne serait pas en train de parler de tout ça&lt;/cite&gt;&quot; et si ma tante en avait...) que j&#39;en ai franchement ras-le-bol d&#39;offrir une tribune à cette personne ; je ferme donc les commentaires sur cet article mais je laisse sa prose, elle fera date...&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Tout d&#39;abord je tiens à faire remarquer que j&#39;ai passé pas mal de temps à rédiger mes commentaires or la majorité de mes propos n&#39;a pas eu de réponse, par exemple ma question dans mon dernier commentaire sur la fiabilité du modèle économique choisi :&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;je ne vois pas en quoi le modèle économique de la vente d&#39;extensions propriétaires serait sûr. Par exemple si la communauté développe les mêmes en libre que ferez-vous ? La course aux fonctionnalités ?&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Enfin, et c&#39;est la motivation première de ce billet, je tiens à dénoncer cette pratique de la fermeture des commentaires totalement contraire à la liberté d&#39;expression, il y a des façons plus civilisées de clore un débat, qu&#39;il soit &lt;em&gt;trollesque&lt;/em&gt; ou non.&lt;/p&gt;
+
+&lt;p&gt;&lt;a id=&quot;note1&quot; href=&quot;http://changaco.net/blog/#note1_c1&quot;&gt;↑&lt;/a&gt; &lt;strong&gt;Édit :&lt;/strong&gt; on me rétorque que les commentaires sont fermés automatiquement aux bouts de 3 jours sur le Standblog. À cela je réponds deux choses :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;je ne vois aucune mention de ça sur ledit blog, il me semble que la moindre des choses serait de le signaler&lt;/li&gt;
+&lt;li&gt;je suis autant en désaccord avec cette pratique qu&#39;avec la fermeture manuelle&lt;/li&gt;
+&lt;/ul&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/Réponse_à_Daniel_Glazman/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/Réponse_à_Daniel_Glazman/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>About this blog</title>
+
+	<id>http://changaco.net/blog/About_this_blog/</id>
+
+	<link href="http://changaco.net/blog/About_this_blog/"/>
+
+
+
+
+
+
+	<category term="tags/clevercss" />
+
+	<category term="tags/css3" />
+
+	<category term="tags/html5" />
+
+	<category term="tags/ikiwiki" />
+
+
+	<updated>2011-12-10T13:52:20Z</updated>
+	<published>2010-05-16T20:49:20Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;This site is powered by &lt;a href=&quot;http://ikiwiki.info&quot;&gt;Ikiwiki&lt;/a&gt;. It took me a while to set it up and I have some things to share.&lt;/p&gt;
+
+&lt;p&gt;Firstly :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../templates/&quot;&gt;templates&lt;/a&gt; that use HTML5&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../code/s2p2/&quot;&gt;s2p2&lt;/a&gt;, a bash script that pre-processes JavaScript and ( Clever ) CSS&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;About &lt;a href=&quot;http://changaco.net/blog/../style/&quot;&gt;style sheets&lt;/a&gt; :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;there is quite some of CSS3, like selectors and flexible box model&lt;/li&gt;
+&lt;li&gt;the biggest part is written in &lt;a href=&quot;http://sandbox.pocoo.org/clevercss/&quot;&gt;Clever CSS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For Clever CSS, a &lt;a href=&quot;http://changaco.net/blog/../code/ccss.xml&quot;&gt;ccss syntax file&lt;/a&gt; for &lt;a href=&quot;http://kate-editor.org/&quot;&gt;kate&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Concerning &lt;a href=&quot;http://changaco.net/blog/../script/&quot;&gt;JavaScript&lt;/a&gt; :&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;I got rid of the default ikiwiki.js as I don&#39;t support old browsers&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../code/chtml/&quot;&gt;chtml&lt;/a&gt; creates real elements from HTML code contained in comments of the form &lt;code&gt;&amp;lt;!--(CHTML) ... --&amp;gt;&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Everything has been written with technologies supported by the current versions of Firefox and Chromium as of April 2010. A conditional comment hides scripts and styles from all versions of IE. If you are using an up-to-date free browser and you encounter a problem send me a mail or even better a patch, I&#39;ll see what I can do.&lt;/p&gt;
+
+&lt;h2 id=&quot;aboutcomments&quot;&gt;About comments&lt;/h2&gt;
+
+&lt;p&gt;After a lot of thinking and some debate I decided to enable pseudo-anonymous comments only ( you can put a nickname and a website ). This means no OpenID and no user registration.&lt;/p&gt;
+
+&lt;p&gt;I&#39;ll try to talk about that in a future post on Internet Identity.&lt;/p&gt;
+
+&lt;h2 id=&quot;criticsofikiwiki&quot;&gt;Critics of ikiwiki&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Perl sux&lt;/li&gt;
+&lt;li&gt;I couldn&#39;t find a good way to build a site from multiple repositories&lt;/li&gt;
+&lt;li&gt;no threaded comments&lt;/li&gt;
+&lt;li&gt;discussion pages as crappy as traditional MediaWiki ones ( maybe even more )&lt;/li&gt;
+&lt;/ul&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/About_this_blog/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/About_this_blog/comments.atom" type="application/atom+xml" />
+
+</entry>
+
+</feed>
