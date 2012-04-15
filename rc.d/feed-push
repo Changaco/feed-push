@@ -6,7 +6,7 @@
 daemon_bin="/usr/bin/feed-push"
 daemon_name=$(basename $daemon_bin)
 pid_file="/var/run/$daemon_name.pid"
-PID=$(cat $pid_file)
+PID=$(cat $pid_file 2>/dev/null)
 
 data_dir=/var/lib/$daemon_name
 conf_dir=/etc/$daemon_name
