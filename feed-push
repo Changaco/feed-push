@@ -125,7 +125,7 @@ def open_config(path, event):
         ignore_event(path, event)
 
 def update_config(path, event):
-    feeds_paths = set(concat(config_to_feed_paths_to_commands.values()))
+    feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     if event == gamin.GAMChanged:
         log('updating actions from modified config file '+config_fd.name)
         parse_config_file(path_to_config_fd[path])
@@ -133,7 +133,7 @@ def update_config(path, event):
         log('removing actions from deleted config file '+config_fd.name)
         config_to_feed_paths_to_commands.pop(path)
         path_to_config_fd.pop(path).close()
-    new_feeds_paths = set(concat(config_to_feed_paths_to_commands.values()))
+    new_feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     for feed_path in feeds_paths.difference(new_feeds_paths):
         monitor.stop_watch(feed_path)
         if feed_path in path_to_feed_fd:
