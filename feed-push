@@ -76,6 +76,7 @@ def ignore_event(path, event):
 def parse_config_file(config_fd):
     feeds_paths = config_to_feed_paths_to_commands[config_fd.name] = {}
     cmd = []
+    log('parsing config file '+config_fd.name)
     config_fd.seek(0)
     for i, line in enumerate(config_fd):
         line = line.strip()
@@ -95,7 +96,7 @@ def parse_config_file(config_fd):
                 dict_append(feeds_paths, feed_path, cmd)
                 if not feed_path in path_to_feed_fd:
                     monitor.watch_file(feed_path, handle_feed_change)
-    log('successfully parsed config file '+config_fd.name)
+                    log('now watching '+feed_path)
 
 
 # Gamin callbacks
@@ -127,7 +128,6 @@ def open_config(path, event):
 def update_config(path, event):
     feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     if event == gamin.GAMChanged:
-        log('updating actions from modified config file '+config_fd.name)
         parse_config_file(path_to_config_fd[path])
     elif event == gamin.GAMDeleted:
         log('removing actions from deleted config file '+config_fd.name)
@@ -136,6 +136,7 @@ def update_config(path, event):
     new_feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     for feed_path in feeds_paths.difference(new_feeds_paths):
         monitor.stop_watch(feed_path)
+        log('stopped watching '+feed_path)
         if feed_path in path_to_feed_fd:
             path_to_feed_fd.pop(feed_path).close()
 
