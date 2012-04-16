@@ -220,7 +220,7 @@ class Apply(argparse.Action):
 def MakeDirs(next_type=None):
     def f(s):
         d = dirname(s)
-        if not isdir(d):
+        if d and not isdir(d):
             try:
                 os.makedirs(d)
             except OSError as e:
