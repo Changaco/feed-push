@@ -62,8 +62,10 @@ def log(*args):
     priority = 7 - priority
     if priority < global_args.log_level:
         return
+    if isinstance(msg, unicode):
+        msg = msg.encode('utf8')
     if global_args.syslog:
-        syslog(*args)
+        syslog(priority, msg)
     else:
         sys.stderr.write(log_levels[priority]+': '+msg+'\n')
 
