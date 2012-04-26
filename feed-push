@@ -64,7 +64,7 @@ def log(*args):
         return
     if isinstance(msg, unicode):
         msg = msg.encode('utf8')
-    if global_args.syslog:
+    if global_args.fork:
         syslog(priority, msg)
     else:
         sys.stderr.write(log_levels[priority]+': '+msg+'\n')
@@ -272,18 +272,18 @@ if __name__ == '__main__':
     p.add_argument('config', type=FirstOf(AbsPath(argparse.FileType('r')), AbsPath(Directory), error='"{}" is neither a file nor a directory'), help='either a file or a directory')
     p.add_argument('state_file', type=MakeDirs(argparse.FileType('a+')), help='e.g. /var/lib/feed-push/state')
     p.add_argument('--flood', default=False, action='store_true', help='push all articles on startup instead of ignoring the ones older than 24h (useful for debugging)')
-    p.add_argument('--fork', metavar='pid-file', nargs=1, type=File(os.O_WRONLY|os.O_CREAT|os.O_EXCL), action=First, help='useful in init scripts')
+    p.add_argument('--fork', metavar='pid-file', nargs=1, type=File(os.O_WRONLY|os.O_CREAT|os.O_EXCL), action=First, help='daemonize and log to syslog')
     p.add_argument('--log-level', nargs=1, default=1, choices=log_levels, action=partial(Apply, log_levels.index), help='default is INFO')
-    p.add_argument('--syslog', default=False, action='store_true', help='log to syslog instead of stderr')
     global_args = p.parse_args()
 
     if global_args.fork:
         pid = os.fork()
         if pid != 0:
+            exit(0)
+        pid = os.fork()
+        if pid != 0:
             global_args.fork.write(str(pid))
             exit(0)
-
-    if global_args.syslog:
         openlog(facility=LOG_DAEMON)
 
     state = {'id_cache': {}}
