@@ -64,10 +64,13 @@ def log(*args):
         return
     if isinstance(msg, unicode):
         msg = msg.encode('utf8')
-    if global_args.fork:
-        syslog(priority, msg)
-    else:
-        sys.stderr.write(log_levels[priority]+': '+msg+'\n')
+    try:
+        if global_args.fork:
+            syslog(priority, msg)
+        else:
+            sys.stderr.write(log_levels[priority]+': '+msg+'\n')
+    except:
+        exit(1)
 
 def ignore_event(path, event):
     log(LOG_DEBUG, 'ignoring event '+gamin_events.get(event, str(event))+' on '+path)
@@ -97,11 +100,19 @@ def parse_config_file(config_fd):
                 feed_path = abspath(feed_path)
                 dict_append(feeds_paths, feed_path, cmd)
                 if not feed_path in path_to_feed_fd:
-                    monitor.watch_file(feed_path, handle_feed_change)
+                    monitor.watch_file(feed_path, handler(handle_feed_change))
                     log('now watching '+feed_path)
 
 
 # Gamin callbacks
+
+def handler(f):
+    def g(path, event):
+        try:
+            f(path, event)
+        except:
+            log(LOG_CRIT, traceback.format_exc())
+    return g
 
 def handle_config_change(path, event):
     path = abspath(path)
@@ -302,10 +313,10 @@ if __name__ == '__main__':
     config_to_feed_paths_to_commands = {}
     if hasattr(global_args.config, 'read'):
         os.chdir(os.path.dirname(global_args.config.name))
-        monitor.watch_file(global_args.config.name, handle_config_change)
+        monitor.watch_file(global_args.config.name, handler(handle_config_change))
     else:
         os.chdir(global_args.config)
-        monitor.watch_directory(global_args.config, handle_config_change)
+        monitor.watch_directory(global_args.config, handler(handle_config_change))
 
     while True:
         monitor.handle_one_event()
