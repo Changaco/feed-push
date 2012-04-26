@@ -285,6 +285,10 @@ if __name__ == '__main__':
             global_args.fork.write(str(pid))
             exit(0)
         openlog(facility=LOG_DAEMON)
+        null = open('/dev/null', 'r+')
+        for f in [sys.stdin, sys.stdout, sys.stderr]:
+            f.flush()
+            os.dup2(null.fileno(), f.fileno())
 
     state = {'id_cache': {}}
     saved_state = global_args.state_file.read().strip()
