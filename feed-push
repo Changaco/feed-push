@@ -291,6 +291,7 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid != 0:
             exit(0)
+        os.setsid()
         pid = os.fork()
         if pid != 0:
             global_args.fork.write(str(pid))
