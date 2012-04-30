@@ -319,5 +319,13 @@ if __name__ == '__main__':
         os.chdir(global_args.config)
         monitor.watch_directory(global_args.config, handler(handle_config_change))
 
-    while True:
-        monitor.handle_one_event()
+    if global_args.fork:
+        while True:
+            monitor.handle_one_event()
+    else:
+        try:
+            while True:
+                monitor.handle_events()
+                time.sleep(1)
+        except KeyboardInterrupt:
+            exit(0)
