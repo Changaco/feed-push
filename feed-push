@@ -26,6 +26,7 @@ from   subprocess import Popen, PIPE, STDOUT
 import sys
 from   syslog     import *
 import time
+import traceback
 
 import feedparser
 import gamin
