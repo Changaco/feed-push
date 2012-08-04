@@ -143,7 +143,7 @@ def update_config(path, event):
     if event == gamin.GAMChanged:
         parse_config_file(path_to_config_fd[path])
     elif event == gamin.GAMDeleted:
-        log('removing actions from deleted config file '+config_fd.name)
+        log('removing actions from deleted config file '+path)
         config_to_feed_paths_to_commands.pop(path)
         path_to_config_fd.pop(path).close()
     new_feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
