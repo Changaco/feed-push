@@ -157,10 +157,9 @@ def handle_feed_change(path, event):
     if path not in path_to_feed_fd:
         if event in [gamin.GAMCreated, gamin.GAMExists, gamin.GAMChanged]:
             try:
-                feed_fd = path_to_feed_fd[path] = open(path)
+                path_to_feed_fd[path] = open(path)
             except IOError as e:
                 return log('failed to open "'+path+'": '+str(e))
-            feed = feedparser.parse(feed_fd.read())
             handle_feed_change(path, gamin.GAMChanged)
         else:
             ignore_event(path, event)
