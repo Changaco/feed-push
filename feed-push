@@ -178,7 +178,7 @@ def handle_feed_change(path, event):
         state['id_cache'][feed_fd.name] = [entry.id for entry in feed.entries]
         save_state()
         if i == 0:
-            log('no new entry found after GAMChanged event on %s' % path)
+            log('GAMChanged: no new entry in %s' % path)
     elif event == gamin.GAMDeleted:
         path_to_feed_fd.pop(path).close()
     else:
