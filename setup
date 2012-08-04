@@ -27,7 +27,9 @@ confdir="${DESTDIR}etc/$progname"
 if [ "$action" == install ]; then
 	install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
 	install_dir examples "$_PREFIX/share/$progname"
-	[ -d /etc/rc.d ] && install_dir rc.d "${DESTDIR}etc" && install -vd "$confdir"
+	install -vd "$confdir"
+	install -v -m 755 -D init/$progname.bash "${DESTDIR}etc/rc.d/$progname"
+	install -v -m 644 -D init/$progname.service "${DESTDIR}usr/lib/systemd/system/$progname.service"
 elif [ "$action" == uninstall ]; then
 	remove "$_PREFIX/bin/$progname"
 	remove "$_PREFIX/share/$progname/examples"
