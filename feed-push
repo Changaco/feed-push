@@ -29,7 +29,6 @@ import time
 import traceback
 
 import feedparser
-import gamin
 
 
 # Constants
@@ -309,6 +308,7 @@ if __name__ == '__main__':
         state.update(json.loads(saved_state))
     del saved_state
 
+    import gamin
     monitor = gamin.WatchMonitor()
     path_to_feed_fd = {}
     path_to_config_fd = {}
