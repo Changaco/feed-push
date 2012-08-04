@@ -14,8 +14,464 @@
 <id>http://changaco.net/blog/</id>
 
 <subtitle type="html">Changaco</subtitle>
-<generator uri="http://ikiwiki.info/" version="3.20111107">ikiwiki</generator>
-<updated>2011-12-10T13:52:20Z</updated>
+<generator uri="http://ikiwiki.info/" version="3.20120202">ikiwiki</generator>
+<updated>2012-06-21T13:13:57Z</updated>
+<entry>
+	<title>Parsing an indented tree in Haskell</title>
+
+	<id>http://changaco.net/blog/parse-indented-tree/</id>
+
+	<link href="http://changaco.net/blog/parse-indented-tree/"/>
+
+
+
+
+
+	<updated>2012-06-04T17:48:49Z</updated>
+	<published>2012-06-04T17:48:49Z</published>
+
+	<content type="html" xml:lang="en">
+	
+
+
+&lt;p&gt;Indentation-based syntaxes are elegant, and trees are handy data structures, yet parsing an indentation-based tree isn&#39;t exactly a well-documented walk in the park.&lt;/p&gt;
+&lt;p&gt;So here is an example using &lt;a href=&quot;http://hackage.haskell.org/package/parsec&quot;&gt;Parsec&lt;/a&gt; and &lt;a href=&quot;http://hackage.haskell.org/package/indents&quot;&gt;indents&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Control.Applicative&lt;/span&gt;
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Data.Char&lt;/span&gt; (&lt;span class=&quot;fu&quot;&gt;isSpace&lt;/span&gt;)
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Data.Either.Utils&lt;/span&gt; (forceEither)
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Data.Monoid&lt;/span&gt;
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;System.Environment&lt;/span&gt; (getArgs)
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Text.Parsec&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;hiding&lt;/span&gt; (many, optional, (&lt;span class=&quot;fu&quot;&gt;&amp;lt;|&amp;gt;&lt;/span&gt;))
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Text.Parsec.Indent&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A basic tree structure:&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Node&lt;/span&gt; [&lt;span class=&quot;dt&quot;&gt;Tree&lt;/span&gt;] &lt;span class=&quot;fu&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Leaf&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;String&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A simple serialization function to easily check the result of our parsing:&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; serializeIndentedTree tree &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;drop&lt;/span&gt; &lt;span class=&quot;dv&quot;&gt;2&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; s (&lt;span class=&quot;fu&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;dv&quot;&gt;1&lt;/span&gt;) tree
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;kw&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     s i (&lt;span class=&quot;dt&quot;&gt;Node&lt;/span&gt; children) &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;st&quot;&gt;&amp;quot;\n&amp;quot;&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; (&lt;span class=&quot;fu&quot;&gt;concat&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;replicate&lt;/span&gt; i &lt;span class=&quot;st&quot;&gt;&amp;quot;    &amp;quot;&lt;/span&gt;) &lt;span class=&quot;fu&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; (&lt;span class=&quot;fu&quot;&gt;concat&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;map&lt;/span&gt; (s (i&lt;span class=&quot;dv&quot;&gt;+1&lt;/span&gt;)) children)
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     s _ (&lt;span class=&quot;dt&quot;&gt;Leaf&lt;/span&gt; text)     &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; text &lt;span class=&quot;fu&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;st&quot;&gt;&amp;quot; &amp;quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Our main function and some glue:&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; main &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     args &lt;span class=&quot;ot&quot;&gt;&amp;lt;-&lt;/span&gt; getArgs
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     input &lt;span class=&quot;ot&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;kw&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;null&lt;/span&gt; args &lt;span class=&quot;kw&quot;&gt;then&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;return&lt;/span&gt; example &lt;span class=&quot;kw&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;readFile&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;head&lt;/span&gt; args
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;fu&quot;&gt;putStrLn&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; serializeIndentedTree &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; forceEither &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; parseIndentedTree input
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; 
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; parseIndentedTree input &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; runIndent &lt;span class=&quot;st&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; runParserT aTree () &lt;span class=&quot;st&quot;&gt;&amp;quot;&amp;quot;&lt;/span&gt; input&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The actual parser:&lt;/p&gt;
+&lt;p&gt;Note that the indents package works by storing a &lt;code&gt;SourcePos&lt;/code&gt; in a &lt;code&gt;State&lt;/code&gt; monad. Its combinators don&#39;t actually consume indentation, they just compare the column numbers. So where we consume &lt;code&gt;spaces&lt;/code&gt; is very important.&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; aTree &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;&amp;lt;$&amp;gt;&lt;/span&gt; many aNode
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; 
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; aNode &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; spaces &lt;span class=&quot;fu&quot;&gt;*&amp;gt;&lt;/span&gt; withBlock makeNode aNodeHeader aNode
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; 
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; aNodeHeader &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; many1 aLeaf &lt;span class=&quot;fu&quot;&gt;&amp;lt;*&lt;/span&gt; spaces
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; 
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; aLeaf &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Leaf&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;&amp;lt;$&amp;gt;&lt;/span&gt; (many1 (satisfy (&lt;span class=&quot;fu&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;.&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;isSpace&lt;/span&gt;)) &lt;span class=&quot;fu&quot;&gt;&amp;lt;*&lt;/span&gt; many (oneOf &lt;span class=&quot;st&quot;&gt;&amp;quot; \t&amp;quot;&lt;/span&gt;))
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; 
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; makeNode leaves nodes &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;dt&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;$&lt;/span&gt; leaves &lt;span class=&quot;fu&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; nodes&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;An example tree:&lt;/p&gt;
+&lt;pre class=&quot;sourceCode literate haskell&quot;&gt;&lt;code class=&quot;sourceCode haskell&quot;&gt;&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt; example &lt;span class=&quot;fu&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;fu&quot;&gt;unlines&lt;/span&gt; [
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;lorem ipsum&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;    dolor&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;    sit amet&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;    consectetur&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;        adipiscing elit dapibus&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;    sodales&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;urna&amp;quot;&lt;/span&gt;,
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;st&quot;&gt;&amp;quot;    facilisis&amp;quot;&lt;/span&gt;
+&lt;span class=&quot;fu&quot;&gt;&amp;gt;&lt;/span&gt;   ]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The result:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;% runhaskell parseIndentedTree.lhs
+lorem ipsum 
+    dolor 
+    sit amet 
+    consectetur 
+        adipiscing elit dapibus 
+    sodales 
+urna 
+    facilisis &lt;/code&gt;&lt;/pre&gt;
+
+
+	</content>
+
+
+	<link rel="comments" href="/blog/parse-indented-tree/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/parse-indented-tree/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>Petit glossaire politique</title>
+
+	<id>http://changaco.net/blog/Petit_glossaire_politique/</id>
+
+	<link href="http://changaco.net/blog/Petit_glossaire_politique/"/>
+
+
+
+
+
+	<updated>2012-06-21T13:13:57Z</updated>
+	<published>2012-04-26T19:09:28Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;Dans &lt;a href=&quot;http://changaco.net/blog/Les_vrais_chiffres_de_la_pr&amp;eacute;sidentielle/&quot;&gt;mon billet précédent&lt;/a&gt; j&#39;argumentais par les chiffres, cette fois je vais me focaliser sur des mots.&lt;/p&gt;
+
+&lt;p&gt;Les discours et débats politiques sont couramment ruinés par le mésusage (intentionnel ou non) de certains mots. On nomme parfois ceci la &lt;a href=&quot;http://fr.wikipedia.org/wiki/novlangue&quot;&gt;novlangue&lt;/a&gt; même si ce n&#39;est pas réellement une nouvelle langue mais seulement une dérive de certains termes.&lt;/p&gt;
+
+&lt;h2 id=&quot;dmocratieetrpublique&quot;&gt;Démocratie et République&lt;/h2&gt;
+
+&lt;p&gt;Commençons par démocratie et république. Aussi loin que je me souvienne j&#39;ai toujours entendu dire que la France est une république démocratique, qu&#39;il faut la défendre et y participer, notamment via les élections. Mais ces dernières années &lt;a href=&quot;http://www.tedxrepubliquesquare.com/etienne-chouard/&quot;&gt;des voix se sont levées contre cette vision&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;En effet selon leurs sens originels, &quot;démocratie&quot; et &quot;république&quot; sont deux régimes politiques opposés.&lt;/p&gt;
+
+&lt;p&gt;Dans une démocratie les citoyens exercent directement le pouvoir, ils n&#39;élisent personne pour gouverner à leur place. Pour les tâches ne pouvant être accomplies par l&#39;ensemble des citoyens, des représentants sont tirés au sort. Ce sont des mandats de courtes durées et les sélectionnés doivent rendre des comptes.&lt;/p&gt;
+
+&lt;p&gt;À l&#39;opposé, une république est une oligarchie élective. Le peuple renonce à exercer le pouvoir en le confiant à une élite gouvernante. Les révolutionnaires français qui prônaient la mise en place d&#39;une république s&#39;opposaient à la démocratie, comme en atteste cette &lt;a href=&quot;http://fr.wikiquote.org/wiki/Emmanuel-Joseph_Siey%C3%A8s&quot;&gt;citation de l&#39;abbé Sieyès&lt;/a&gt;:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Les citoyens qui se nomment des représentants renoncent et doivent renoncer à faire eux-mêmes la loi ; donc ils n&#39;ont pas de volonté particulière à imposer. Toute influence, tout pouvoir leur appartient sur la personne de leur mandataire, mais c&#39;est tout. S&#39;ils dictaient des volontés ce ne serait plus un état représentatif, ce serait un état démocratique.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;On peut être démocrate ou républicain (aucun rapport avec le bipartisme des États-Unis), ce sont deux positions défendables, mais on ne peut pas être les deux en même temps.&lt;/p&gt;
+
+&lt;h2 id=&quot;technocratie&quot;&gt;Technocratie&lt;/h2&gt;
+
+&lt;p&gt;Face à des lois comme HADOPI, certaines personnes s&#39;y connaissant ou croyant s&#39;y connaître en informatique ont commencé à remettre en cause la légitimité des parlementaires à légiférer sur des domaines qu&#39;ils ne maîtrisent pas.&lt;/p&gt;
+
+&lt;p&gt;Or en république la seule légitimité est celle de l&#39;élection, et en démocratie celle de la citoyenneté. Le régime dans lequel les &quot;experts&quot; sont au pouvoir s&#39;appelle la technocratie.&lt;/p&gt;
+
+&lt;p&gt;Cette &lt;a href=&quot;http://www.bortzmeyer.org/pas-sage-en-seine-politiques.html&quot;&gt;citation de Stéphane Bortzmeyer&lt;/a&gt; résume bien le problème de cette approche:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Est-ce que les lois sur l&#39;Internet doivent être faites exclusivement par les geeks, les lois sur l&#39;agriculture uniquement par des paysans et les lois sur la santé seulement par des médecins ?&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Une loi sur tel ou tel domaine n&#39;affecte pas que les professionnels ou amateurs du domaine en question, elle affecte potentiellement la population entière. C&#39;est pour ça que ce ne sont pas les &quot;experts&quot; qui doivent décider mais bien des représentants de toute la population.&lt;/p&gt;
+
+&lt;h2 id=&quot;anarchismeetlibralisme&quot;&gt;Anarchisme et Libéralisme&lt;/h2&gt;
+
+&lt;p&gt;Dans les idéologies anti-autoritaires, l&#39;anarchisme et le libéralisme ont souffert des déformations et contre-vérités.&lt;/p&gt;
+
+&lt;p&gt;Le mot &quot;anarchie&quot; est fréquemment utilisé péjorativement comme synonyme de désordre alors que l&#39;anarchie est l&#39;absence de gouvernement, d&#39;autorité, pas l&#39;absence d&#39;ordre. Les anarchistes sont également souvent assimilés à des utopistes ou des terroristes.&lt;/p&gt;
+
+&lt;p&gt;Ces préjugés font que plusieurs groupes de personnes hésitent à se revendiquer de l&#39;anarchisme alors qu&#39;ils font clairement partie de la grande famille anarchiste, c&#39;est par exemple le cas d&#39;Anonymous (&quot;&lt;em&gt;No leaders no followers&lt;/em&gt;&quot;) et des &lt;a href=&quot;http://blog.p2pfoundation.net/&quot;&gt;défenseurs du P2P&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Le libéralisme a plutôt dérivé dans l&#39;autre sens. Il a été sali par des néo-libéralismes consécutifs qui lui ont fait dire tout et son contraire, s&#39;éloignant toujours plus du sens originel de défense de la liberté des citoyens pour se focaliser seulement sur le rôle de l&#39;État dans l&#39;économie.&lt;/p&gt;
+
+&lt;p&gt;De nombreuses personnes accusent le libéralisme de tous les maux et en particulier d&#39;être responsable de la crise économique et financière actuelle, croyant qu&#39;elle a été causée par un manque de régulation alors que &lt;a href=&quot;http://www.tetedequenelle.fr/2011/09/abolir-la-creation-monetaire-banques/&quot;&gt;le mal est bien plus profond&lt;/a&gt;. En réalité qualifier notre économie de libérale est un contresens du même niveau que d&#39;affirmer que nous sommes en démocratie.&lt;/p&gt;
+
+&lt;h2 id=&quot;communismesocialismeetcapitalisme&quot;&gt;Communisme, Socialisme et Capitalisme&lt;/h2&gt;
+
+&lt;p&gt;Ce trio issu des travaux de Marx a été tellement détourné que l&#39;utiliser est un terrain très glissant. Aucun de ces termes n&#39;a de définition précise et consensuelle, chacun traîne une pléthore de préjugés. En général je les boycott en les qualifiant de clivages dépassés.&lt;/p&gt;
+
+&lt;h2 id=&quot;gaucheversusdroite&quot;&gt;Gauche versus Droite&lt;/h2&gt;
+
+&lt;p&gt;Pire que les trois précédents, le faux clivage gauche/droite, en plus de n&#39;avoir aucune définition précise et consensuelle, n&#39;a aucun sens étymologique.&lt;/p&gt;
+
+&lt;p&gt;Il divise artificiellement le pays en deux camps prétendument opposés et a été critiqué comme étant une vision simpliste de la politique. Plusieurs représentations en deux dimensions ont été créées, certaines conservant un axe gauche/droite:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.politicalcompass.org/&quot;&gt;The Political Compass&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.gaucheliberale.org/post/2011/11/04/Carte-2D-du-Paysage-Politique-Fran%C3%A7ais-%28PPF%29-mise-%C3%A0-jour-novembre-2011&quot;&gt;Carte 2D du Paysage Politique Français&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;et d&#39;autres l&#39;abandonnant complètement:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.politimetrie.org/?p=1&quot;&gt;Quelle est votre position politimétrique ?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://changaco.net/politim%C3%A9trie/changaco_ae.html&quot;&gt;Test de politimétrie Autoritarisme/Égalitarisme&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;Le langage est la base de tout échange d&#39;idées, si nous n&#39;utilisons pas correctement des mots aux définition claires et consensuelles le dialogue est impossible.&lt;/p&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/Petit_glossaire_politique/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/Petit_glossaire_politique/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>Les vrais chiffres de la présidentielle</title>
+
+	<id>http://changaco.net/blog/Les_vrais_chiffres_de_la_pr%C3%A9sidentielle/</id>
+
+	<link href="http://changaco.net/blog/Les_vrais_chiffres_de_la_pr%C3%A9sidentielle/"/>
+
+
+
+
+
+	<updated>2012-05-07T16:09:51Z</updated>
+	<published>2012-04-23T22:03:18Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;&lt;em&gt;Ce billet se base sur les &lt;a href=&quot;http://elections.interieur.gouv.fr/PR2012/&quot;&gt;résultats publiés par le Ministère de l&#39;Intérieur&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;lesscoresdescandidatsrelativiss&quot;&gt;Les scores des candidats relativisés&lt;/h2&gt;
+
+&lt;p&gt;Dans les résultats officiels les pourcentages des candidats ne sont calculés qu&#39;en fonction des suffrages exprimés. Nous allons les relativiser en fonction des inscrits sur les listes électorales, mais aussi de la population en âge de voter car beaucoup de personnes ne peuvent pas, ne veulent pas ou ont oublié de s&#39;inscrire sur les listes.&lt;/p&gt;
+
+&lt;p&gt;J&#39;aurais aussi aimé calculer l&#39;abstention réelle mais je n&#39;ai pas trouvé de données à jour sur le nombre de français majeurs non privés du droit de vote.&lt;/p&gt;
+
+&lt;p&gt;Pour la non-participation je me base sur &lt;a href=&quot;http://www.insee.fr/fr/themes/tableau.asp?reg_id=0&amp;amp;ref_id=ccc&quot;&gt;la pyramide des âges publiée par l&#39;INSEE&lt;/a&gt; qui estime à environ 50 892 994 le nombre de personnes résidant en France ayant 18 ans ou plus, ce qui donne (par soustraction des 46 037 545 inscrits) environ 4 855 449 non inscrites parmi celles-ci.&lt;/p&gt;
+
+&lt;h3 id=&quot;premiertour&quot;&gt;Premier tour&lt;/h3&gt;
+
+&lt;table&gt;
+&lt;col align=&quot;left&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+	&lt;th&gt;Candidat&lt;/th&gt;
+	&lt;th&gt;Voix&lt;/th&gt;
+	&lt;th&gt;% des exprimés&lt;/th&gt;
+	&lt;th&gt;% des inscrits&lt;/th&gt;
+	&lt;th&gt;% des majeurs&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;&lt;em&gt;blancs + non-part.&lt;/em&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;&lt;strong&gt;29,49 %&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;François Hollande&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;10 273 582&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;28,63 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;22,32 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;20,19 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;&lt;em&gt;blancs + abstention&lt;/em&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;&lt;strong&gt;22,05 %&lt;/strong&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;19,95 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Nicolas Sarkozy&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;9 753 844&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;27,18 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;21,19 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;19,17 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Marine Le Pen&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;6 421 773&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;17,90 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;13,95 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;12,62 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Jean-Luc Mélenchon&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;3 985 298&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;11,11 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;8,66 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;7,83 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;François Bayrou&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;3 275 349&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;9,13 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;7,11 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;6,44 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Eva Joly&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;828 451&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;2,31 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,80 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,63 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Nicolas Dupont-Aignan&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;644 086&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,79 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,40 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,27 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Philippe Poutou&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;411 178&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;1,15 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,89 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,81 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Nathalie Arthaud&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;202 562&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,56 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,44 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,40 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Jacques Cheminade&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;89 572&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,25 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,19 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;0,18 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;Résultats:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;blancs + abstention arrive en deuxième position au coude à coude avec François Hollande&lt;/li&gt;
+&lt;li&gt;blancs + non-participation arrive en première position loin devant le PS&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;secondtour&quot;&gt;Second tour&lt;/h3&gt;
+
+&lt;table&gt;
+&lt;col align=&quot;left&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;col align=&quot;right&quot; /&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+	&lt;th&gt;Candidat&lt;/th&gt;
+	&lt;th&gt;Voix&lt;/th&gt;
+	&lt;th&gt;% des exprimés&lt;/th&gt;
+	&lt;th&gt;% des inscrits&lt;/th&gt;
+	&lt;th&gt;% des majeurs&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;François Hollande&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;18 003 044&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;51,63 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;39,11 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;35,37 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;Nicolas Sarkozy&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;16 864 167&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;48.37 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;36,63 %&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;33,14 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;&lt;em&gt;blancs + non-part.&lt;/em&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;&lt;strong&gt;31,49 %&lt;/strong&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+	&lt;td align=&quot;left&quot;&gt;&lt;em&gt;blancs + abstention&lt;/em&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt; &lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;&lt;strong&gt;24,26 %&lt;/strong&gt;&lt;/td&gt;
+	&lt;td align=&quot;right&quot;&gt;21,95 %&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;La légitimité de François Hollande est donc plutôt faible, avec seulement 39,11% des inscrits sur les listes électorales qui ont voté pour lui au second tour, contre 42,68% pour Sarkozy en 2007.&lt;/p&gt;
+
+&lt;h2 id=&quot;loppositionlumps&quot;&gt;L&#39;opposition à l&#39;UMPS&lt;/h2&gt;
+
+&lt;p&gt;56,50% des inscrits sur les listes électorales n&#39;ont &lt;strong&gt;pas&lt;/strong&gt; voté pour l&#39;UMPS au premier tour. Autrement dit les deux grands partis ne rassemblent même pas une majorité des électeurs.&lt;/p&gt;
+
+&lt;p&gt;Au deuxième tour c&#39;est un électeur sur quatre (24,26%) qui a boycotté l&#39;UMPS contre un sur cinq en 2007 (19,56%).&lt;/p&gt;
+
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;&lt;strong&gt;Que nous apprennent ces chiffres ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Ces chiffres sont une façon de plus d&#39;argumenter que l&#39;élection présidentielle est une mascarade qui n&#39;a rien de démocratique.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Quelles sont les alternatives ?&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;On peut:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;changer de mode de scrutin, par exemple passer au &lt;a href=&quot;http://www.votedevaleur.org/&quot;&gt;vote de valeur&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;supprimer le poste de président de la République, considérant qu&#39;un élu ne peut pas représenter 65 millions de personnes&lt;/li&gt;
+&lt;li&gt;supprimer la République pour &lt;a href=&quot;http://le-message.org/&quot;&gt;instaurer une Démocratie&lt;/a&gt; (regardez par exemple cette &lt;a href=&quot;https://www.youtube.com/watch?v=oN5tdMSXWV8&quot;&gt;conférence d&#39;Étienne Chouard&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Dans tous les cas il nous faut une nouvelle Constitution…&lt;/p&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/Les_vrais_chiffres_de_la_présidentielle/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/Les_vrais_chiffres_de_la_présidentielle/comments.atom" type="application/atom+xml" />
+
+</entry>
+<entry>
+	<title>Announcing feed-push and sendxmpp-py</title>
+
+	<id>http://changaco.net/blog/Announcing_feed-push_and_sendxmpp-py/</id>
+
+	<link href="http://changaco.net/blog/Announcing_feed-push_and_sendxmpp-py/"/>
+
+
+
+
+
+	<updated>2012-04-16T12:30:25Z</updated>
+	<published>2012-04-16T12:30:25Z</published>
+
+	<content type="html" xml:lang="en">
+	&lt;p&gt;Polling RSS/Atom feeds wastes a lot of resources, for example &quot;of all bandwidth generated by [The Pirate Bay] today nearly half comes from the RSS feed&quot;&lt;a href=&quot;http://changaco.net/blog/#fn:1&quot; id=&quot;fnref:1&quot; class=&quot;footnote&quot;&gt;1&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Until today I used to poll the feeds of my websites, watching for contributions on wikis and comments on my blog.&lt;/p&gt;
+
+&lt;p&gt;Now I receive updates instantly via XMPP thanks to these two scripts:&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://changaco.net/gitweb/?p=feed-push.git&quot;&gt;feed-push&lt;/a&gt; is a daemon that watches local RSS/Atom files for changes and executes commands when new articles appear. It is written in python2 and depends on gamin and feedparser.&lt;/p&gt;
+
+&lt;p&gt;sendxmpp is the XMPP equivalent of sendmail, &lt;a href=&quot;http://changaco.net/gitweb/?p=sendxmpp-py.git&quot;&gt;sendxmpp-py&lt;/a&gt; is a python3 replacement for the old sendxmpp written in Perl.&lt;/p&gt;
+
+&lt;h2 id=&quot;rants&quot;&gt;Rants&lt;/h2&gt;
+
+&lt;p&gt;I couldn&#39;t find a cross-platform library to watch files/directories accessible from python to use in feed-push. I fell back to gamin which only works on Linux and FreeBSD at the time I&#39;m writing this post.&lt;/p&gt;
+
+&lt;p&gt;sendxmpp should be provided by the XMPP server (in my case prosody) the same way SMTP servers provide sendmail.&lt;/p&gt;
+
+&lt;p&gt;There is still no way for a developer to provide a cross-distribution and easy way for users to cleanly install its software, the only tool I know of that tries to solve this problem is &lt;a href=&quot;http://pkgxx.org/&quot;&gt;pkg++&lt;/a&gt; but it&#39;s not even close to being ready.&lt;/p&gt;
+
+&lt;p&gt;&lt;br&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;references&quot;&gt;References&lt;/h2&gt;
+
+&lt;div class=&quot;footnotes&quot;&gt;
+&lt;hr /&gt;
+&lt;ol&gt;
+
+&lt;li id=&quot;fn:1&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://torrentfreak.com/torrent-less-pirate-bay-sees-massive-drop-in-bandwith-120308/&quot;&gt;Torrent-less Pirate Bay Sees Massive Drop in Bandwith&lt;/a&gt;&lt;a href=&quot;http://changaco.net/blog/#fnref:1&quot; class=&quot;reversefootnote&quot;&gt;&amp;#160;&amp;#8617;&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;/ol&gt;
+&lt;/div&gt;
+
+	</content>
+
+
+	<link rel="comments" href="/blog/Announcing_feed-push_and_sendxmpp-py/#comments" type="text/html" />
+
+
+	<link rel="comments" href="/blog/Announcing_feed-push_and_sendxmpp-py/comments.atom" type="application/atom+xml" />
+
+</entry>
 <entry>
 	<title>DNS problems and alternatives</title>
 
@@ -159,12 +615,6 @@
 
 
 
-
-	<category term="tags/idea" />
-
-	<category term="tags/internet" />
-
-
 	<updated>2010-09-02T11:12:33Z</updated>
 	<published>2010-08-30T22:45:55Z</published>
 
@@ -200,17 +650,17 @@
 
 </entry>
 <entry>
-	<title>tabs vs spaces</title>
+	<title>Code indentation and alignment</title>
 
-	<id>http://changaco.net/blog/tabs_vs_spaces/</id>
+	<id>http://changaco.net/blog/Code_indentation_and_alignment/</id>
 
-	<link href="http://changaco.net/blog/tabs_vs_spaces/"/>
-
-
+	<link href="http://changaco.net/blog/Code_indentation_and_alignment/"/>
 
 
 
-	<updated>2011-04-12T09:23:05Z</updated>
+
+
+	<updated>2012-04-16T12:31:10Z</updated>
 	<published>2010-06-01T15:09:22Z</published>
 
 	<content type="html" xml:lang="en">
@@ -218,7 +668,7 @@
 
 &lt;h2 id=&quot;decompositionoftheproblem&quot;&gt;Decomposition of the problem&lt;/h2&gt;
 
-&lt;p&gt;Firstly, you need to understand the difference between the &lt;strong&gt;tab key&lt;/strong&gt; and the &lt;strong&gt;tab character&lt;/strong&gt;. What you text editor does when you press the tab key is a matter of configuration and has nothing to do with the problem discussed here.&lt;/p&gt;
+&lt;p&gt;Firstly, you need to understand the difference between the &lt;strong&gt;tab key&lt;/strong&gt; and the &lt;strong&gt;tab character&lt;/strong&gt;. What your text editor does when you press the tab key is a matter of configuration and has nothing to do with the problem discussed here.&lt;/p&gt;
 
 &lt;p&gt;Secondly, we need to distinguish &lt;strong&gt;indentation&lt;/strong&gt; and &lt;strong&gt;alignment&lt;/strong&gt;, this is explained in &lt;a href=&quot;http://www.iovene.com/61&quot;&gt;TABs vs Spaces. The end of the debate.&lt;/a&gt; and shows why the historical rendering of tabs is not fit for alignment.&lt;/p&gt;
 
@@ -266,7 +716,7 @@
 
 &lt;h3 id=&quot;elastictabstops&quot;&gt;Elastic tabstops&lt;/h3&gt;
 
-&lt;p&gt;This solution solves all the issues listed here and makes alignment easier. How ? By redefining the way the tab character is displayed. It&#39;s all explained in &lt;a href=&quot;http://nickgravgaard.com/elastictabstops/&quot;&gt;Elastic tabstops - a better way to indent and align code&lt;/a&gt;. The downside is that text editors&#39; code has to be modified.&lt;/p&gt;
+&lt;p&gt;This solution solves all the issues listed here and makes alignment easier. How ? By redefining the way the tab character is displayed. It&#39;s all explained in &lt;a href=&quot;http://nickgravgaard.com/elastictabstops/&quot;&gt;Elastic tabstops - a better way to indent and align code&lt;/a&gt;. The downside is that text editors have to be modified.&lt;/p&gt;
 
 &lt;h2 id=&quot;myopinion&quot;&gt;My opinion&lt;/h2&gt;
 
@@ -275,10 +725,10 @@
 	</content>
 
 
-	<link rel="comments" href="/blog/tabs_vs_spaces/#comments" type="text/html" />
+	<link rel="comments" href="/blog/Code_indentation_and_alignment/#comments" type="text/html" />
 
 
-	<link rel="comments" href="/blog/tabs_vs_spaces/comments.atom" type="application/atom+xml" />
+	<link rel="comments" href="/blog/Code_indentation_and_alignment/comments.atom" type="application/atom+xml" />
 
 </entry>
 <entry>
@@ -292,7 +742,7 @@
 
 
 
-	<updated>2011-12-10T13:50:13Z</updated>
+	<updated>2010-05-18T18:12:15Z</updated>
 	<published>2010-05-16T20:49:20Z</published>
 
 	<content type="html" xml:lang="en">
@@ -339,82 +789,6 @@
 
 
 	<link rel="comments" href="/blog/Réponse_à_Daniel_Glazman/comments.atom" type="application/atom+xml" />
-
-</entry>
-<entry>
-	<title>About this blog</title>
-
-	<id>http://changaco.net/blog/About_this_blog/</id>
-
-	<link href="http://changaco.net/blog/About_this_blog/"/>
-
-
-
-
-
-
-	<category term="tags/clevercss" />
-
-	<category term="tags/css3" />
-
-	<category term="tags/html5" />
-
-	<category term="tags/ikiwiki" />
-
-
-	<updated>2011-12-10T13:52:20Z</updated>
-	<published>2010-05-16T20:49:20Z</published>
-
-	<content type="html" xml:lang="en">
-	&lt;p&gt;This site is powered by &lt;a href=&quot;http://ikiwiki.info&quot;&gt;Ikiwiki&lt;/a&gt;. It took me a while to set it up and I have some things to share.&lt;/p&gt;
-
-&lt;p&gt;Firstly :&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../templates/&quot;&gt;templates&lt;/a&gt; that use HTML5&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../code/s2p2/&quot;&gt;s2p2&lt;/a&gt;, a bash script that pre-processes JavaScript and ( Clever ) CSS&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;About &lt;a href=&quot;http://changaco.net/blog/../style/&quot;&gt;style sheets&lt;/a&gt; :&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;there is quite some of CSS3, like selectors and flexible box model&lt;/li&gt;
-&lt;li&gt;the biggest part is written in &lt;a href=&quot;http://sandbox.pocoo.org/clevercss/&quot;&gt;Clever CSS&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;For Clever CSS, a &lt;a href=&quot;http://changaco.net/blog/../code/ccss.xml&quot;&gt;ccss syntax file&lt;/a&gt; for &lt;a href=&quot;http://kate-editor.org/&quot;&gt;kate&lt;/a&gt;.&lt;/p&gt;
-
-&lt;p&gt;Concerning &lt;a href=&quot;http://changaco.net/blog/../script/&quot;&gt;JavaScript&lt;/a&gt; :&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;I got rid of the default ikiwiki.js as I don&#39;t support old browsers&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;http://changaco.net/blog/../code/chtml/&quot;&gt;chtml&lt;/a&gt; creates real elements from HTML code contained in comments of the form &lt;code&gt;&amp;lt;!--(CHTML) ... --&amp;gt;&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Everything has been written with technologies supported by the current versions of Firefox and Chromium as of April 2010. A conditional comment hides scripts and styles from all versions of IE. If you are using an up-to-date free browser and you encounter a problem send me a mail or even better a patch, I&#39;ll see what I can do.&lt;/p&gt;
-
-&lt;h2 id=&quot;aboutcomments&quot;&gt;About comments&lt;/h2&gt;
-
-&lt;p&gt;After a lot of thinking and some debate I decided to enable pseudo-anonymous comments only ( you can put a nickname and a website ). This means no OpenID and no user registration.&lt;/p&gt;
-
-&lt;p&gt;I&#39;ll try to talk about that in a future post on Internet Identity.&lt;/p&gt;
-
-&lt;h2 id=&quot;criticsofikiwiki&quot;&gt;Critics of ikiwiki&lt;/h2&gt;
-
-&lt;ul&gt;
-&lt;li&gt;Perl sux&lt;/li&gt;
-&lt;li&gt;I couldn&#39;t find a good way to build a site from multiple repositories&lt;/li&gt;
-&lt;li&gt;no threaded comments&lt;/li&gt;
-&lt;li&gt;discussion pages as crappy as traditional MediaWiki ones ( maybe even more )&lt;/li&gt;
-&lt;/ul&gt;
-
-	</content>
-
-
-	<link rel="comments" href="/blog/About_this_blog/#comments" type="text/html" />
-
-
-	<link rel="comments" href="/blog/About_this_blog/comments.atom" type="application/atom+xml" />
 
 </entry>
 
