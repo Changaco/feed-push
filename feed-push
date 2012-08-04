@@ -130,10 +130,9 @@ def open_config(path, event):
         if (not path.endswith('.conf') or path[0] == '.') and not hasattr(global_args.config, 'read'):
             return log('ignoring '+path+' (not a valid config file name)')
         try:
-            config_fd = open(path)
+            config_fd = path_to_config_fd[path] = open(path)
         except IOError as e:
             return log('failed to open "'+line+'" '+str(e))
-        path_to_config_fd[path] = config_fd
         parse_config_file(config_fd)
     else:
         ignore_event(path, event)
