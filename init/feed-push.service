@@ -1,0 +1,12 @@
+[Unit]
+Description=Feed Push daemon
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/run/feed-push.pid
+ExecStart=/usr/bin/feed-push /etc/feed-push /var/lib/feed-push/state --fork /run/feed-push.pid
+ExecStop=/bin/rm /run/feed-push.pid
+
+[Install]
+WantedBy=multi-user.target
