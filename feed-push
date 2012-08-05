@@ -160,16 +160,20 @@ def handle_feed_change(path, event):
             return log('failed to open "'+path+'": '+str(e))
         feed = feedparser.parse(feed_fd.read())
         feed_fd.close()
+        id_cache = state['id_cache']
+        feed_id = feed.feed.get('link', path)
+        if feed_id != path and path in id_cache:
+            id_cache[feed_id] = id_cache.pop(path)
         i = 0
         for entry in reversed(feed.entries):
-            if entry.id in state['id_cache'].get(path, []) or \
+            if entry.id in id_cache.get(feed_id, []) or \
                not global_args.flood and calendar.timegm(entry.published_parsed) < time.time() - 86400:
                 continue
             i += 1
             for feed_path_to_commands in config_to_feed_paths_to_commands.values():
                 for cmd in feed_path_to_commands.get(path, []):
                     run_command(format_cmd(cmd, feed=feed.feed, entry=entry), entry.content[0].value)
-        state['id_cache'][path] = [entry.id for entry in feed.entries]
+        id_cache[feed_id] = [entry.id for entry in feed.entries]
         save_state()
         if i == 0:
             log('no new entry in %s' % path)
