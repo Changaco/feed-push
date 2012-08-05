@@ -182,7 +182,10 @@ def handle_feed_change(path, event):
 
 def save_state():
     global_args.state_file.truncate(0)
-    json.dump(state, global_args.state_file)
+    if global_args.pretty:
+        json.dump(state, global_args.state_file, indent=4)
+    else:
+        json.dump(state, global_args.state_file)
     global_args.state_file.flush()
 
 
@@ -283,6 +286,7 @@ if __name__ == '__main__':
     p.add_argument('--flood', default=False, action='store_true', help='push all articles on startup instead of ignoring the ones older than 24h (useful for debugging)')
     p.add_argument('--fork', metavar='pid-file', nargs=1, type=File(os.O_WRONLY|os.O_CREAT|os.O_EXCL), action=First, help='daemonize and log to syslog')
     p.add_argument('--log-level', nargs=1, default=1, choices=log_levels, action=partial(Apply, log_levels.index), help='default is INFO')
+    p.add_argument('--no-pretty', dest='pretty', default=True, action='store_false', help='don\'t pretty print JSON in state file')
     global_args = p.parse_args()
 
     if global_args.fork:
