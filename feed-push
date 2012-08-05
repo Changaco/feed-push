@@ -78,10 +78,14 @@ def ignore_event(path, event):
 
 # Config parsing
 
-def parse_config_file(config_fd):
-    feeds_paths = config_to_feed_paths_to_commands[config_fd.name] = {}
+def parse_config_file(config_path):
+    try:
+        config_fd = open(config_path)
+    except IOError as e:
+        return log('failed to open "'+line+'": '+str(e))
+    feeds_paths = config_to_feed_paths_to_commands[config_path] = {}
     cmd = []
-    log('parsing config file '+config_fd.name)
+    log('parsing config file '+config_path)
     config_fd.seek(0)
     for i, line in enumerate(config_fd):
         line = line.strip()
@@ -92,16 +96,18 @@ def parse_config_file(config_fd):
                 cmd = []
             cmd.append(line[1:].rstrip(';'))
         elif not cmd:
-            log(LOG_ERR, 'missing command in file '+config_fd.name+' before line '+str(i))
+            log(LOG_ERR, 'missing command in file '+config_path+' before line '+str(i))
             return
         else:
             cmd = '; '.join(cmd)
             for feed_path in glob(line):
                 feed_path = abspath(feed_path)
                 dict_append(feeds_paths, feed_path, cmd)
-                if not feed_path in path_to_feed_fd:
+                if not feed_path in watched_feeds:
                     monitor.watch_file(feed_path, handler(handle_feed_change))
+                    watched_feeds.add(feed_path)
                     log('now watching '+feed_path)
+    config_fd.close()
 
 
 # Gamin callbacks
@@ -118,7 +124,7 @@ def handle_config_change(path, event):
     path = abspath(path)
     if os.path.isdir(path):
         ignore_event(path, event)
-    elif not path in path_to_config_fd:
+    elif not path in config_to_feed_paths_to_commands:
         open_config(path, event)
     elif event in [gamin.GAMChanged, gamin.GAMDeleted]:
         update_config(path, event)
@@ -129,61 +135,44 @@ def open_config(path, event):
     if event in [gamin.GAMCreated, gamin.GAMExists]:
         if (not path.endswith('.conf') or path[0] == '.') and not hasattr(global_args.config, 'read'):
             return log('ignoring '+path+' (not a valid config file name)')
-        try:
-            config_fd = path_to_config_fd[path] = open(path)
-        except IOError as e:
-            return log('failed to open "'+line+'" '+str(e))
-        parse_config_file(config_fd)
+        parse_config_file(path)
     else:
         ignore_event(path, event)
 
 def update_config(path, event):
     feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     if event == gamin.GAMChanged:
-        parse_config_file(path_to_config_fd[path])
+        parse_config_file(path)
     elif event == gamin.GAMDeleted:
         log('removing actions from deleted config file '+path)
         config_to_feed_paths_to_commands.pop(path)
-        path_to_config_fd.pop(path).close()
     new_feeds_paths = set(concat(d.keys() for d in config_to_feed_paths_to_commands.values()))
     for feed_path in feeds_paths.difference(new_feeds_paths):
         monitor.stop_watch(feed_path)
+        watched_feeds.discard(feed_path)
         log('stopped watching '+feed_path)
-        if feed_path in path_to_feed_fd:
-            path_to_feed_fd.pop(feed_path).close()
 
 def handle_feed_change(path, event):
-    if path not in path_to_feed_fd:
-        if event in [gamin.GAMCreated, gamin.GAMExists, gamin.GAMChanged]:
-            try:
-                path_to_feed_fd[path] = open(path)
-            except IOError as e:
-                return log('failed to open "'+path+'": '+str(e))
-            handle_feed_change(path, gamin.GAMChanged)
-        else:
-            ignore_event(path, event)
-    elif event == gamin.GAMCreated:
-        path_to_feed_fd.pop(path).close()
-        handle_feed_change(path, gamin.GAMCreated)
-    elif event == gamin.GAMChanged:
-        feed_fd = path_to_feed_fd[path]
-        feed_fd.seek(0)
+    if event in [gamin.GAMCreated, gamin.GAMExists, gamin.GAMChanged]:
+        try:
+            feed_fd = open(path)
+        except IOError as e:
+            return log('failed to open "'+path+'": '+str(e))
         feed = feedparser.parse(feed_fd.read())
+        feed_fd.close()
         i = 0
         for entry in reversed(feed.entries):
-            if entry.id in state['id_cache'].get(feed_fd.name, []) or \
+            if entry.id in state['id_cache'].get(path, []) or \
                not global_args.flood and calendar.timegm(entry.published_parsed) < time.time() - 86400:
                 continue
             i += 1
             for feed_path_to_commands in config_to_feed_paths_to_commands.values():
                 for cmd in feed_path_to_commands.get(path, []):
                     run_command(format_cmd(cmd, feed=feed.feed, entry=entry), entry.content[0].value)
-        state['id_cache'][feed_fd.name] = [entry.id for entry in feed.entries]
+        state['id_cache'][path] = [entry.id for entry in feed.entries]
         save_state()
         if i == 0:
-            log('GAMChanged: no new entry in %s' % path)
-    elif event == gamin.GAMDeleted:
-        path_to_feed_fd.pop(path).close()
+            log('no new entry in %s' % path)
     else:
         ignore_event(path, event)
 
@@ -315,8 +304,7 @@ if __name__ == '__main__':
 
     import gamin
     monitor = gamin.WatchMonitor()
-    path_to_feed_fd = {}
-    path_to_config_fd = {}
+    watched_feeds = set()
     config_to_feed_paths_to_commands = {}
     if hasattr(global_args.config, 'read'):
         os.chdir(os.path.dirname(global_args.config.name))
