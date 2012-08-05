@@ -162,6 +162,9 @@ def handle_feed_change(path, event):
             handle_feed_change(path, gamin.GAMChanged)
         else:
             ignore_event(path, event)
+    elif event == gamin.GAMCreated:
+        path_to_feed_fd.pop(path).close()
+        handle_feed_change(path, gamin.GAMCreated)
     elif event == gamin.GAMChanged:
         feed_fd = path_to_feed_fd[path]
         feed_fd.seek(0)
