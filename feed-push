@@ -92,14 +92,15 @@ def parse_config_file(config_path):
         if len(line) == 0 or line[0] == '#':
             continue
         if line[0] == '%':
-            if isinstance(cmd, str):
+            if not isinstance(cmd, list):
                 cmd = []
             cmd.append(line[1:].rstrip(';'))
         elif not cmd:
             log(LOG_ERR, 'missing command in file '+config_path+' before line '+str(i))
             return
         else:
-            cmd = '; '.join(cmd)
+            if isinstance(cmd, list):
+                cmd = '; '.join(cmd)
             for feed_path in glob(line):
                 feed_path = abspath(feed_path)
                 dict_append(feeds_paths, feed_path, cmd)
