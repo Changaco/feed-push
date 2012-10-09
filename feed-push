@@ -198,7 +198,7 @@ def format_cmd(cmd, **kwargs):
     for arg in shlex.split(cmd.encode('utf8')):
         a = arg.decode('utf8')
         b = a.format(**kwargs)
-        if a != b:
+        if a != b or len(b.split()) > 1:
             r += u" '" + b.replace(u"'", u'\'"\'"\'') + u"'"
         else:
             r += u' ' + arg
