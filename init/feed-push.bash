@@ -1,7 +1,6 @@
 #!/bin/bash
 
-. /etc/rc.conf
-. /etc/rc.d/functions
+die() { echo "$@"; exit 1; }
 
 daemon_bin="/usr/bin/feed-push"
 daemon_name=$(basename $daemon_bin)
@@ -13,33 +12,20 @@ conf_dir=/etc/$daemon_name
 
 case "$1" in
     start)
-        stat_busy "Starting $daemon_name daemon"
+        echo "Starting $daemon_name daemon"
         if [ -z "$PID" ]; then
             $daemon_bin "$conf_dir" "$data_dir/state" --fork $pid_file
-            if [ $? -gt 0 ]; then
-                stat_fail
-                exit 1
-            else
-                add_daemon $daemon_name
-                stat_done
-            fi
+            r=$?; [ $r -gt 0 ] && die "Failure: $daemon_name returned $r"
         else
-            stat_fail
-            exit 1
+            die "Failure: $pid_file already exists"
         fi
         ;;
 
     stop)
-        stat_busy "Stopping $daemon_name daemon"
-        [ ! -z "$PID" ] && kill $PID &> /dev/null
-        if [ $? -gt 0 ]; then
-            stat_fail
-            exit 1
-        else
-            rm -f $pid_file &> /dev/null
-            rm_daemon $daemon_name
-            stat_done
-        fi
+        echo "Stopping $daemon_name daemon"
+        [ ! -z "$PID" ] && kill $PID
+        r=$?; [ $r -gt 0 ] && die "Failure: kill returned $r"
+        rm -f $pid_file
         ;;
 
     restart)
