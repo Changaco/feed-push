@@ -1,19 +1,7 @@
 #!/bin/sh
 
-usage () {
-	echo "usage: [DESTDIR=/] [PREFIX=/usr] $(basename "$0") install|uninstall|update" && exit 1
-}
-
-remove () {
-	[ -e "$1" ] && rm -vrf --preserve-root "$1"
-}
-
-install_dir () {
-	mkdir -p "$2"
-	cp -rv "$1" "$2"
-}
-
-[ $# -eq 1 ] && action=$1 || usage
+install_dir(){ mkdir -p "$2"; cp -rv "$1" "$2"; }
+remove(){ [ -e "$1" ] && rm -vrf --preserve-root "$1"; }
 
 [ -z "$DESTDIR" ] && DESTDIR=/
 [ -z "$PREFIX" ] && PREFIX=/usr
@@ -24,24 +12,27 @@ _PREFIX=${DESTDIR%%/}/${PREFIX##/}
 progname=feed-push
 confdir="${DESTDIR}etc/$progname"
 
-if [ "$action" == install ]; then
-	install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
-	install_dir examples "$_PREFIX/share/$progname"
-	install -vd "$confdir"
-	install -v -m 755 -D init/$progname.bash "${DESTDIR}etc/rc.d/$progname"
-	install -v -m 644 -D init/$progname.service "${DESTDIR}usr/lib/systemd/system/$progname.service"
-elif [ "$action" == uninstall ]; then
-	remove "$_PREFIX/bin/$progname"
-	remove "$_PREFIX/share/$progname/examples"
-	remove "${DESTDIR}etc/rc.d/$progname"
-	if [ $(ls -a "$confdir" | wc -l) -eq 2 ]; then rmdir "$confdir"
-	else echo "not removing config dir $confdir (not empty)"
-	fi
-elif [ "$action" == update ]; then
-	$0 uninstall &>/dev/null
-	$0 install
-else
-	usage
-fi
+case "$1" in
+	install)
+		install -v -m 755 -D $progname "$_PREFIX/bin/$progname"
+		install_dir examples "$_PREFIX/share/$progname"
+		install -vd "$confdir"
+		install -v -m 644 -D init/$progname.service "${DESTDIR}usr/lib/systemd/system/$progname.service"
+		;;
+	uninstall)
+		remove "$_PREFIX/bin/$progname"
+		remove "$_PREFIX/share/$progname/examples"
+		if [ $(ls -a "$confdir" | wc -l) -eq 2 ]; then rmdir "$confdir"
+		else echo "not removing config dir $confdir (not empty)"
+		fi
+		;;
+	update)
+		$0 uninstall &>/dev/null
+		$0 install
+		;;
+	*)
+		echo "usage: [DESTDIR=/] [PREFIX=/usr] $(basename "$0") install|uninstall|update" && exit 1
+		;;
+esac
 
 exit 0
