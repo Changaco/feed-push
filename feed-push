@@ -33,7 +33,7 @@ import feedparser
 
 # Constants
 
-log_levels = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERR', 'CRIT', 'ALERT', 'EMERG']
+log_levels = ['EMERG', 'ALERT', 'CRIT', 'ERR', 'WARNING', 'NOTICE', 'INFO', 'DEBUG']
 
 gamin_events = {
     1:'GAMChanged', 2:'GAMDeleted', 3:'GAMStartExecuting', 4:'GAMStopExecuting',
@@ -54,21 +54,20 @@ def dict_append(d, k, v):
 
 def log(*args):
     if len(args) == 1:
-        priority, msg = LOG_INFO, args[0]
+        level, msg = LOG_INFO, args[0]
     elif len(args) == 2:
-        priority, msg = args
+        level, msg = args
     else:
         return
-    priority = 7 - priority
-    if priority < global_args.log_level:
+    if level > global_args.log_level:
         return
     if isinstance(msg, unicode):
         msg = msg.encode('utf8')
     try:
         if global_args.fork:
-            syslog(priority, msg)
+            syslog(level, msg)
         else:
-            sys.stderr.write(log_levels[priority]+': '+msg+'\n')
+            sys.stderr.write(log_levels[level]+': '+msg+'\n')
     except:
         exit(1)
 
@@ -286,7 +285,7 @@ if __name__ == '__main__':
     p.add_argument('state_file', type=MakeDirs(argparse.FileType('a+')), help='e.g. /var/lib/feed-push/state')
     p.add_argument('--flood', default=False, action='store_true', help='push all articles on startup instead of ignoring the ones older than 24h (useful for debugging)')
     p.add_argument('--fork', metavar='pid-file', nargs=1, type=File(os.O_WRONLY|os.O_CREAT|os.O_EXCL), action=First, help='daemonize and log to syslog')
-    p.add_argument('--log-level', nargs=1, default=1, choices=log_levels, action=partial(Apply, log_levels.index), help='default is INFO')
+    p.add_argument('--log-level', nargs=1, default=6, choices=log_levels, action=partial(Apply, log_levels.index), help='default is INFO')
     p.add_argument('--no-pretty', dest='pretty', default=True, action='store_false', help='don\'t pretty print JSON in state file')
     global_args = p.parse_args()
 
